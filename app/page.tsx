@@ -1,14 +1,18 @@
 "use client"
 
 import { useState } from "react"
-import { Sidebar, type View } from "@/components/dashboard/sidebar"
-import { Overview } from "@/components/dashboard/overview"
-import { GroupsView } from "@/components/dashboard/groups-view"
-import { ProfilesView } from "@/components/dashboard/profiles-view"
-import { LeadsView } from "@/components/dashboard/leads-view"
-import { MonitoringView } from "@/components/dashboard/monitoring-view"
-import { Button } from "@/components/ui/button"
-import { Search, Bell, RefreshCw } from "lucide-react"
+import useSWR from "swr"
+import { Sidebar, type View } from "@/app/components/dashboard/sidebar"
+import { FacebookConnectionOnboarding } from "@/app/components/dashboard/facebook-connection-onboarding"
+import { Overview } from "@/app/components/dashboard/overview"
+import { GroupsView } from "@/app/components/dashboard/groups-view"
+import { ProfilesView } from "@/app/components/dashboard/profiles-view"
+import { LeadsView } from "@/app/components/dashboard/leads-view"
+import { MonitoringView } from "@/app/components/dashboard/monitoring-view"
+import { Badge } from "@/app/components/ui/badge"
+import { Button } from "@/app/components/ui/button"
+import { getFacebookConnection } from "@/lib/api"
+import { Search, Bell, CheckCircle2, Link2, RefreshCw } from "lucide-react"
 
 const titles: Record<View, { title: string; subtitle: string }> = {
   overview: { title: "Overview", subtitle: "Pipeline metrics across every monitored source" },
@@ -20,11 +24,23 @@ const titles: Record<View, { title: string; subtitle: string }> = {
 
 export default function Page() {
   const [view, setView] = useState<View>("overview")
+  const { data: facebookConnection, isLoading: isLoadingConnection } = useSWR(
+    "facebook-connection",
+    getFacebookConnection,
+    { revalidateOnFocus: true },
+  )
   const meta = titles[view]
+  const facebookConnected = facebookConnection?.status === "connected"
+  const facebookConnectionIssue = facebookConnection?.status === "expired" || facebookConnection?.status === "invalid"
+  const onboardingReason = facebookConnection?.status === "expired"
+    ? "expired"
+    : facebookConnection?.status === "invalid"
+      ? "invalid"
+      : "not_connected"
 
   return (
     <div className="flex h-screen overflow-hidden bg-background">
-      <Sidebar view={view} onChange={setView} />
+      <Sidebar view={view} onChange={setView} facebookConnected={facebookConnected} />
 
       <div className="flex min-w-0 flex-1 flex-col">
         {/* Topbar */}
@@ -34,6 +50,18 @@ export default function Page() {
             <p className="truncate text-xs text-muted-foreground">{meta.subtitle}</p>
           </div>
           <div className="ml-auto flex items-center gap-2">
+            <Badge
+              className={
+                facebookConnected
+                  ? "border-success/25 bg-success/15 text-success"
+                  : facebookConnectionIssue
+                    ? "border-warning/25 bg-warning/15 text-warning"
+                    : "border-border bg-muted text-muted-foreground"
+              }
+            >
+              {facebookConnected ? <CheckCircle2 className="size-3" /> : <Link2 className="size-3" />}
+              {facebookConnected ? "Facebook connected" : facebookConnectionIssue ? "Reconnect Facebook" : "Connect Facebook"}
+            </Badge>
             <div className="relative hidden md:block">
               <Search className="pointer-events-none absolute left-2.5 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
               <input
@@ -52,11 +80,19 @@ export default function Page() {
         </header>
 
         <main className="flex-1 overflow-y-auto p-6">
-        {view === "overview" && <Overview />}
-        {view === "groups" && <GroupsView />}
-        {view === "profiles" && <ProfilesView />}
-        {view === "leads" && <LeadsView />}
-        {view === "monitoring" && <MonitoringView />}
+        {isLoadingConnection ? (
+          <div className="flex h-full items-center justify-center text-sm text-muted-foreground">Checking Facebook connection...</div>
+        ) : !facebookConnected ? (
+          <FacebookConnectionOnboarding reason={onboardingReason} />
+        ) : (
+          <>
+            {view === "overview" && <Overview />}
+            {view === "groups" && <GroupsView />}
+            {view === "profiles" && <ProfilesView />}
+            {view === "leads" && <LeadsView />}
+            {view === "monitoring" && <MonitoringView />}
+          </>
+        )}
         </main>
       </div>
     </div>
