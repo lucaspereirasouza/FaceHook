@@ -1,18 +1,17 @@
-'use client';
+"use client"
 
-import React from 'react';
+import { Button } from "@/app/components/ui/button"
+import { Link2 } from "lucide-react"
 
-export default function FacebookLoginButton() {
+export default function FacebookLoginButton({ reconnect = false }: { reconnect?: boolean }) {
   const handleClick = () => {
-    window.location.href = '/api/auth/facebook/login';
-  };
+    window.location.assign("/api/auth/facebook/login")
+  }
 
   return (
-    <button
-      onClick={handleClick}
-      className="rounded bg-blue-600 px-4 py-2 text-white"
-    >
-      Link Facebook Account
-    </button>
-  );
+    <Button onClick={handleClick} size="lg">
+      <Link2 className="size-4" />
+      {reconnect ? "Reconnect Facebook" : "Connect Facebook"}
+    </Button>
+  )
 }

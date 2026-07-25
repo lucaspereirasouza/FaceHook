@@ -1,8 +1,10 @@
 "use client"
 
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import { Badge } from "@/components/ui/badge"
-import { workers, logs, overviewStats, type WorkerState } from "@/lib/mock-data"
+import { useEffect } from "react"
+import useSWR from "swr"
+import { Card, CardContent, CardHeader, CardTitle } from "@/app/components/ui/card"
+import { Badge } from "@/app/components/ui/badge"
+import { getLogs, getQueueStatus, getWorkers, streamLogs, type LogEntry, type WorkerState } from "@/lib/api"
 import { cn } from "@/lib/utils"
 import { Cpu, Server, Bell, ListChecks, Timer } from "lucide-react"
 
@@ -30,6 +32,21 @@ const levelMeta = {
 }
 
 export function MonitoringView() {
+  const { data: workers = [] } = useSWR("workers", getWorkers, { refreshInterval: 30_000 })
+  const { data: queue } = useSWR("queue", getQueueStatus, { refreshInterval: 10_000 })
+  const { data: logs = [], mutate: mutateLogs } = useSWR("logs", () => getLogs({ limit: 50 }), {
+    refreshInterval: 15_000,
+  })
+
+  useEffect(() => {
+    const stream = streamLogs()
+    stream.onmessage = (event) => {
+      const log = JSON.parse(event.data) as LogEntry
+      void mutateLogs((current = []) => [log, ...current.filter((entry) => entry.id !== log.id)].slice(0, 50), false)
+    }
+    return () => stream.close()
+  }, [mutateLogs])
+
   return (
     <div className="space-y-6">
       <div>
@@ -91,27 +108,27 @@ export function MonitoringView() {
           <CardContent className="space-y-4">
             <div>
               <div className="flex items-end justify-between">
-                <p className="font-mono text-3xl font-semibold">{overviewStats.queueSize}</p>
+                <p className="font-mono text-3xl font-semibold">{queue?.size ?? 0}</p>
                 <span className="text-xs text-muted-foreground">posts awaiting AI</span>
               </div>
               <div className="mt-2 h-2 w-full overflow-hidden rounded-full bg-muted">
-                <div className="h-full rounded-full bg-primary" style={{ width: "38%" }} />
+                <div className="h-full rounded-full bg-primary" style={{ width: `${Math.min((queue?.size ?? 0), 100)}%` }} />
               </div>
-              <p className="mt-1 text-xs text-muted-foreground">Healthy — well under 100 backlog threshold</p>
+              <p className="mt-1 text-xs text-muted-foreground">{queue?.failed ?? 0} failed jobs awaiting retry</p>
             </div>
             <div className="grid grid-cols-2 gap-3 border-t border-border pt-3 text-sm">
               <div className="flex items-center gap-2">
                 <Timer className="size-4 text-muted-foreground" />
                 <div>
-                  <p className="font-mono font-semibold">1.4s</p>
+                  <p className="font-mono font-semibold">{queue?.oldestJobAgeSec ?? 0}s</p>
                   <p className="text-xs text-muted-foreground">Avg wait</p>
                 </div>
               </div>
               <div className="flex items-center gap-2">
                 <Cpu className="size-4 text-muted-foreground" />
                 <div>
-                  <p className="font-mono font-semibold">3 / 3</p>
-                  <p className="text-xs text-muted-foreground">Workers up</p>
+                  <p className="font-mono font-semibold">{queue?.inFlight ?? 0}</p>
+                  <p className="text-xs text-muted-foreground">In flight</p>
                 </div>
               </div>
             </div>

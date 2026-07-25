@@ -23,9 +23,11 @@ const nav: { id: View; label: string; icon: React.ElementType; badge?: string }[
 export function Sidebar({
   view,
   onChange,
+  facebookConnected,
 }: {
   view: View
   onChange: (v: View) => void
+  facebookConnected: boolean
 }) {
   return (
     <aside className="flex h-full w-64 shrink-0 flex-col bg-sidebar text-sidebar-foreground">
@@ -82,9 +84,14 @@ export function Sidebar({
           </div>
           <div className="min-w-0 leading-tight">
             <p className="truncate text-sm font-medium text-sidebar-accent-foreground">Alex Ortega</p>
-            <p className="truncate text-xs text-sidebar-foreground/70">Growth Ops</p>
+            <p className="truncate text-xs text-sidebar-foreground/70">
+              {facebookConnected ? "Facebook connected" : "Facebook connection required"}
+            </p>
           </div>
-          <span className="ml-auto flex size-2 rounded-full bg-success" aria-hidden />
+          <span
+            className={cn("ml-auto flex size-2 rounded-full", facebookConnected ? "bg-success" : "bg-warning")}
+            aria-hidden
+          />
         </div>
       </div>
     </aside>

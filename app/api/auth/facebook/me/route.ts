@@ -1,8 +1,38 @@
-import { NextResponse } from 'next/server';
-import { listTokens } from '@/lib/facebookStore';
+import { NextRequest, NextResponse } from 'next/server';
+import {
+  FACEBOOK_SESSION_COOKIE,
+  getFacebookConnection,
+  getToken,
+  invalidateToken,
+} from '@/lib/facebookStore';
 
-export async function GET(request: Request) {
-  // Return a list of linked Facebook accounts (MVP)
-  const tokens = listTokens();
-  return NextResponse.json({ success: true, accounts: tokens });
+export async function GET(request: NextRequest) {
+  const sessionId = request.cookies.get(FACEBOOK_SESSION_COOKIE)?.value;
+  let connection = getFacebookConnection(sessionId);
+
+  if (connection.status === 'connected' && connection.account) {
+    const token = getToken(connection.account.id);
+    if (token) {
+      try {
+        const validationResponse = await fetch(
+          `https://graph.facebook.com/me?fields=id&access_token=${encodeURIComponent(token.accessToken)}`,
+          { cache: 'no-store' }
+        );
+        if (validationResponse.status === 400 || validationResponse.status === 401) {
+          invalidateToken(token.userId);
+          connection = getFacebookConnection(sessionId);
+        }
+      } catch {
+        // A temporary network error must not disconnect a working account.
+      }
+    }
+  }
+
+  const response = NextResponse.json(connection);
+
+  if (connection.status === 'not_connected' && sessionId) {
+    response.cookies.delete(FACEBOOK_SESSION_COOKIE);
+  }
+
+  return response;
 }

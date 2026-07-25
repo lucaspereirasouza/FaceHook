@@ -1,12 +1,15 @@
 "use client"
 
-import { Card, CardContent } from "@/components/ui/card"
-import { Badge } from "@/components/ui/badge"
-import { Button } from "@/components/ui/button"
-import { businessProfiles } from "@/lib/mock-data"
+import useSWR from "swr"
+import { Card, CardContent } from "@/app/components/ui/card"
+import { Badge } from "@/app/components/ui/badge"
+import { Button } from "@/app/components/ui/button"
+import { listProfiles } from "@/lib/api"
 import { Plus, MapPin, Webhook, Sparkles, Ban } from "lucide-react"
 
 export function ProfilesView() {
+  const { data: businessProfiles = [] } = useSWR("profiles", listProfiles)
+
   return (
     <div className="space-y-6">
       <div className="flex flex-wrap items-center justify-between gap-3">

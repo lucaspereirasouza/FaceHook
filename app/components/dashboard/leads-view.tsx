@@ -1,17 +1,16 @@
 "use client"
 
 import { useState } from "react"
-import { Card } from "@/components/ui/card"
-import { Badge } from "@/components/ui/badge"
-import { Button, buttonVariants } from "@/components/ui/button"
+import useSWR from "swr"
+import { Card } from "@/app/components/ui/card"
+import { Badge } from "@/app/components/ui/badge"
+import { Button, buttonVariants } from "@/app/components/ui/button"
 import {
-  leads as allLeads,
   statusColor,
   urgencyColor,
   scoreColor,
-  type Lead,
-  type LeadStatus,
 } from "@/lib/mock-data"
+import { getLead, getLeadFilters, listLeads, type Lead, type LeadStatus } from "@/lib/api"
 import { cn } from "@/lib/utils"
 import {
   Search,
@@ -24,22 +23,17 @@ import {
   Copy,
 } from "lucide-react"
 
-const filters: (LeadStatus | "All")[] = ["All", "New", "Reviewed", "Contacted", "Converted", "Ignored"]
-
 export function LeadsView() {
-  const [filter, setFilter] = useState<(typeof filters)[number]>("All")
+  const [filter, setFilter] = useState<LeadStatus | "All">("All")
   const [query, setQuery] = useState("")
-  const [selected, setSelected] = useState<Lead | null>(null)
-
-  const visible = allLeads.filter((l) => {
-    const matchesFilter = filter === "All" || l.status === filter
-    const matchesQuery =
-      query === "" ||
-      l.summary.toLowerCase().includes(query.toLowerCase()) ||
-      l.author.toLowerCase().includes(query.toLowerCase()) ||
-      l.service.toLowerCase().includes(query.toLowerCase())
-    return matchesFilter && matchesQuery
-  })
+  const [selectedId, setSelectedId] = useState<string | null>(null)
+  const { data: leadFilters } = useSWR("lead-filters", getLeadFilters)
+  const { data: leadPage } = useSWR(["leads", filter, query], () =>
+    listLeads({ status: filter === "All" ? undefined : filter, search: query || undefined }),
+  )
+  const { data: selectedLead } = useSWR(selectedId ? ["lead", selectedId] : null, () => getLead(selectedId!))
+  const filters: (LeadStatus | "All")[] = ["All", ...(leadFilters?.statuses ?? [])]
+  const visible = leadPage?.items ?? []
 
   return (
     <div className="flex gap-6">
@@ -73,7 +67,7 @@ export function LeadsView() {
               {f}
               {f !== "All" && (
                 <span className="ml-1.5 opacity-70">
-                  {allLeads.filter((l) => l.status === f).length}
+                  {leadPage?.total ?? 0}
                 </span>
               )}
             </button>
@@ -87,9 +81,9 @@ export function LeadsView() {
               key={lead.id}
               className={cn(
                 "cursor-pointer p-4 transition-colors hover:border-primary/40",
-                selected?.id === lead.id && "border-primary ring-1 ring-primary/30",
+                selectedId === lead.id && "border-primary ring-1 ring-primary/30",
               )}
-              onClick={() => setSelected(lead)}
+              onClick={() => setSelectedId(lead.id)}
             >
               <div className="flex items-start gap-3">
                 <div className="flex size-10 shrink-0 items-center justify-center rounded-full bg-muted text-xs font-semibold">
@@ -132,7 +126,7 @@ export function LeadsView() {
       </div>
 
       {/* Detail panel */}
-      {selected && <LeadDetail lead={selected} onClose={() => setSelected(null)} />}
+      {selectedLead && <LeadDetail lead={selectedLead} onClose={() => setSelectedId(null)} />}
     </div>
   )
 }

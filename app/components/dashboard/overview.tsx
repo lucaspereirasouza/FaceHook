@@ -1,14 +1,13 @@
 "use client"
 
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import { Badge } from "@/components/ui/badge"
+import useSWR from "swr"
+import { Card, CardContent, CardHeader, CardTitle } from "@/app/components/ui/card"
+import { Badge } from "@/app/components/ui/badge"
 import {
-  overviewStats,
-  trend,
-  leads,
   scoreColor,
   statusColor,
 } from "@/lib/mock-data"
+import { getOverviewStats, getPipelineHealth, getTrend, listLeads } from "@/lib/api"
 import {
   Users,
   FileText,
@@ -20,19 +19,32 @@ import {
   ArrowUpRight,
 } from "lucide-react"
 
-const kpis = [
-  { label: "Groups Monitored", value: overviewStats.groupsMonitored, icon: Users, hint: "3 added this week" },
-  { label: "Total Posts", value: overviewStats.totalPosts.toLocaleString(), icon: FileText, hint: "+845 today" },
-  { label: "AI Processed", value: overviewStats.aiProcessed.toLocaleString(), icon: Cpu, hint: "96.3% of collected" },
-  { label: "Qualified Leads", value: overviewStats.qualifiedLeads, icon: Target, hint: "7.5% conversion", accent: true },
-  { label: "Processing Failures", value: overviewStats.processingFailures, icon: AlertTriangle, hint: "last 24h", warn: true },
-  { label: "AI Cost", value: `$${overviewStats.aiCostUsd.toFixed(2)}`, icon: DollarSign, hint: "month to date" },
-  { label: "Queue Size", value: overviewStats.queueSize, icon: ListChecks, hint: "posts awaiting AI" },
-]
-
 export function Overview() {
-  const maxPosts = Math.max(...trend.map((t) => t.posts))
-  const recent = leads.slice(0, 5)
+  const { data: overviewStats } = useSWR("overview-stats", () => getOverviewStats())
+  const { data: trend = [] } = useSWR("overview-trend", () => getTrend())
+  const { data: pipeline } = useSWR("pipeline-health", getPipelineHealth)
+  const { data: leads } = useSWR("latest-leads", () => listLeads({ page: 1 }))
+  const maxPosts = Math.max(1, ...trend.map((point) => point.posts))
+  const recent = leads?.items.slice(0, 5) ?? []
+  const kpis = overviewStats
+    ? [
+        { label: "Groups Monitored", value: overviewStats.groupsMonitored, icon: Users, hint: "actively collecting" },
+        { label: "Total Posts", value: overviewStats.totalPosts.toLocaleString(), icon: FileText, hint: "collected" },
+        { label: "AI Processed", value: overviewStats.aiProcessed.toLocaleString(), icon: Cpu, hint: "classified" },
+        { label: "Qualified Leads", value: overviewStats.qualifiedLeads, icon: Target, hint: "matched", accent: true },
+        { label: "Processing Failures", value: overviewStats.processingFailures, icon: AlertTriangle, hint: "in range", warn: true },
+        { label: "AI Cost", value: `$${overviewStats.aiCostUsd.toFixed(2)}`, icon: DollarSign, hint: "in range" },
+        { label: "Queue Size", value: overviewStats.queueSize, icon: ListChecks, hint: "posts awaiting AI" },
+      ]
+    : []
+  const pipelineStages = pipeline
+    ? [
+        { stage: "Facebook Collection", pct: 100, note: `${pipeline.collected.toLocaleString()} collected` },
+        { stage: "AI Classification", pct: Math.round((pipeline.processed / Math.max(1, pipeline.collected)) * 100), note: `${pipeline.processed.toLocaleString()} processed` },
+        { stage: "Business Matching", pct: Math.round((pipeline.qualified / Math.max(1, pipeline.processed)) * 100), note: `${pipeline.qualified.toLocaleString()} qualified` },
+        { stage: "Processing Reliability", pct: Math.round((1 - pipeline.failureRate) * 100), note: `${pipeline.failed.toLocaleString()} failed` },
+      ]
+    : []
 
   return (
     <div className="space-y-6">
@@ -111,13 +123,7 @@ export function Overview() {
             <p className="text-sm text-muted-foreground">Live stage throughput</p>
           </CardHeader>
           <CardContent className="space-y-4">
-            {[
-              { stage: "Facebook Collection", pct: 100, note: "6 groups active" },
-              { stage: "Duplicate Detection", pct: 94, note: "6% filtered as dupes" },
-              { stage: "AI Classification", pct: 88, note: "38 in queue" },
-              { stage: "Business Matching", pct: 76, note: "qualified rate" },
-              { stage: "Discord Delivery", pct: 91, note: "1 webhook retrying" },
-            ].map((s) => (
+            {pipelineStages.map((s) => (
               <div key={s.stage}>
                 <div className="mb-1 flex items-center justify-between text-sm">
                   <span className="font-medium">{s.stage}</span>

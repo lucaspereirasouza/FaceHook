@@ -1,46 +1,45 @@
 "use client"
 
-import { useEffect, useState } from "react"
-import { Button } from "@/components/ui/button"
-import { Badge } from "@/components/ui/badge"
-import { businessProfiles, type MonitoredGroup } from "@/lib/mock-data"
+import { useCallback, useEffect, useState } from "react"
+import { Button } from "@/app/components/ui/button"
+import { Badge } from "@/app/components/ui/badge"
+import type { BusinessProfile, MonitoredGroup } from "@/lib/api"
 import { X, Check, Globe } from "lucide-react"
 
 interface AddGroupDialogProps {
   open: boolean
   onClose: () => void
   onAdd: (group: MonitoredGroup) => void
+  profiles: BusinessProfile[]
 }
 
 const intervalOptions = [15, 30, 45, 60]
 
-export function AddGroupDialog({ open, onClose, onAdd }: AddGroupDialogProps) {
+export function AddGroupDialog({ open, onClose, onAdd, profiles }: AddGroupDialogProps) {
   const [name, setName] = useState("")
   const [url, setUrl] = useState("")
   const [interval, setInterval] = useState(30)
   const [selectedProfiles, setSelectedProfiles] = useState<string[]>([])
   const [error, setError] = useState<string | null>(null)
 
-  // Reset the form each time the dialog opens.
-  useEffect(() => {
-    if (open) {
-      setName("")
-      setUrl("")
-      setInterval(30)
-      setSelectedProfiles([])
-      setError(null)
-    }
-  }, [open])
+  const closeDialog = useCallback(() => {
+    setName("")
+    setUrl("")
+    setInterval(30)
+    setSelectedProfiles([])
+    setError(null)
+    onClose()
+  }, [onClose])
 
   // Close on Escape.
   useEffect(() => {
     if (!open) return
     const onKey = (e: KeyboardEvent) => {
-      if (e.key === "Escape") onClose()
+      if (e.key === "Escape") closeDialog()
     }
     window.addEventListener("keydown", onKey)
     return () => window.removeEventListener("keydown", onKey)
-  }, [open, onClose])
+  }, [open, closeDialog])
 
   if (!open) return null
 
@@ -76,7 +75,7 @@ export function AddGroupDialog({ open, onClose, onAdd }: AddGroupDialogProps) {
       errors: 0,
     }
     onAdd(group)
-    onClose()
+    closeDialog()
   }
 
   return (
@@ -90,7 +89,7 @@ export function AddGroupDialog({ open, onClose, onAdd }: AddGroupDialogProps) {
       <button
         type="button"
         aria-label="Close dialog"
-        onClick={onClose}
+        onClick={closeDialog}
         className="absolute inset-0 bg-background/70 backdrop-blur-sm"
       />
 
@@ -110,7 +109,7 @@ export function AddGroupDialog({ open, onClose, onAdd }: AddGroupDialogProps) {
           </div>
           <button
             type="button"
-            onClick={onClose}
+            onClick={closeDialog}
             aria-label="Close"
             className="rounded-md p-1 text-muted-foreground transition-colors hover:bg-secondary hover:text-foreground"
           >
@@ -171,7 +170,7 @@ export function AddGroupDialog({ open, onClose, onAdd }: AddGroupDialogProps) {
               Posts in this group are classified against the selected profiles.
             </p>
             <div className="grid gap-2 sm:grid-cols-2">
-              {businessProfiles.map((profile) => {
+              {profiles.map((profile) => {
                 const active = selectedProfiles.includes(profile.id)
                 return (
                   <button
@@ -202,7 +201,7 @@ export function AddGroupDialog({ open, onClose, onAdd }: AddGroupDialogProps) {
             <div className="flex flex-wrap gap-1.5">
               {selectedProfiles.map((id) => (
                 <Badge key={id} className="border-border bg-secondary text-secondary-foreground">
-                  {businessProfiles.find((p) => p.id === id)?.name}
+                  {profiles.find((profile) => profile.id === id)?.name}
                 </Badge>
               ))}
             </div>
@@ -215,7 +214,7 @@ export function AddGroupDialog({ open, onClose, onAdd }: AddGroupDialogProps) {
           )}
 
           <div className="flex justify-end gap-2 border-t border-border pt-4">
-            <Button type="button" variant="ghost" onClick={onClose}>
+            <Button type="button" variant="ghost" onClick={closeDialog}>
               Cancel
             </Button>
             <Button type="submit">Add Group</Button>

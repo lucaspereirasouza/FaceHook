@@ -1,11 +1,12 @@
 "use client"
 
 import { useState } from "react"
-import { Card, CardContent } from "@/components/ui/card"
-import { Badge } from "@/components/ui/badge"
-import { Button } from "@/components/ui/button"
-import { groups as initialGroups, businessProfiles, type GroupStatus, type MonitoredGroup } from "@/lib/mock-data"
-import { AddGroupDialog } from "@/components/dashboard/add-group-dialog"
+import useSWR from "swr"
+import { Card, CardContent } from "@/app/components/ui/card"
+import { Badge } from "@/app/components/ui/badge"
+import { Button } from "@/app/components/ui/button"
+import { listGroups, listProfiles, type GroupStatus, type MonitoredGroup } from "@/lib/api"
+import { AddGroupDialog } from "@/app/components/dashboard/add-group-dialog"
 import { Plus, ExternalLink, Clock, AlertCircle, CheckCircle2, PauseCircle } from "lucide-react"
 
 function statusMeta(status: GroupStatus) {
@@ -19,16 +20,13 @@ function statusMeta(status: GroupStatus) {
   }
 }
 
-function profileName(id: string) {
-  return businessProfiles.find((p) => p.id === id)?.name ?? id
-}
-
 export function GroupsView() {
-  const [groups, setGroups] = useState<MonitoredGroup[]>(initialGroups)
+  const { data: groups = [], mutate: mutateGroups } = useSWR("groups", listGroups)
+  const { data: businessProfiles = [] } = useSWR("profiles", listProfiles)
   const [dialogOpen, setDialogOpen] = useState(false)
 
   function handleAdd(group: MonitoredGroup) {
-    setGroups((prev) => [group, ...prev])
+    void mutateGroups((current = []) => [group, ...current], false)
   }
 
   return (
@@ -45,7 +43,12 @@ export function GroupsView() {
         </Button>
       </div>
 
-      <AddGroupDialog open={dialogOpen} onClose={() => setDialogOpen(false)} onAdd={handleAdd} />
+      <AddGroupDialog
+        open={dialogOpen}
+        onClose={() => setDialogOpen(false)}
+        onAdd={handleAdd}
+        profiles={businessProfiles}
+      />
 
       <div className="grid gap-4 md:grid-cols-2">
         {groups.map((group) => {
@@ -94,7 +97,7 @@ export function GroupsView() {
                 <div className="mt-3 flex flex-wrap items-center gap-1.5">
                   {group.profiles.map((pid) => (
                     <Badge key={pid} className="border-border bg-secondary text-secondary-foreground">
-                      {profileName(pid)}
+                      {businessProfiles.find((profile) => profile.id === pid)?.name ?? pid}
                     </Badge>
                   ))}
                 </div>
