@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useState } from "react"
 import { Button } from "@/app/components/ui/button"
 import { Badge } from "@/app/components/ui/badge"
-import type { BusinessProfile, MonitoredGroup } from "@/lib/api"
+import { createGroup, type BusinessProfile, type MonitoredGroup } from "@/lib/api"
 import { X, Check, Globe } from "lucide-react"
 
 interface AddGroupDialogProps {
@@ -21,6 +21,7 @@ export function AddGroupDialog({ open, onClose, onAdd, profiles }: AddGroupDialo
   const [interval, setInterval] = useState(30)
   const [selectedProfiles, setSelectedProfiles] = useState<string[]>([])
   const [error, setError] = useState<string | null>(null)
+  const [isSaving, setIsSaving] = useState(false)
 
   const closeDialog = useCallback(() => {
     setName("")
@@ -47,7 +48,7 @@ export function AddGroupDialog({ open, onClose, onAdd, profiles }: AddGroupDialo
     setSelectedProfiles((prev) => (prev.includes(id) ? prev.filter((p) => p !== id) : [...prev, id]))
   }
 
-  function handleSubmit(e: React.FormEvent) {
+  async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
     if (!name.trim()) {
       setError("Group name is required.")
@@ -62,20 +63,24 @@ export function AddGroupDialog({ open, onClose, onAdd, profiles }: AddGroupDialo
       return
     }
 
-    const group: MonitoredGroup = {
-      id: `g-${Date.now()}`,
-      name: name.trim(),
-      url: url.trim().startsWith("http") ? url.trim() : `https://${url.trim()}`,
-      enabled: true,
-      intervalMinutes: interval,
-      profiles: selectedProfiles,
-      lastScan: "not scanned yet",
-      status: "active",
-      postsCollected: 0,
-      errors: 0,
+    setIsSaving(true)
+    setError(null)
+
+    try {
+      const group = await createGroup({
+        name: name.trim(),
+        url: url.trim().startsWith("http") ? url.trim() : `https://${url.trim()}`,
+        intervalMinutes: interval,
+        profiles: selectedProfiles,
+        enabled: true,
+      })
+      onAdd(group)
+      closeDialog()
+    } catch {
+      setError("The group could not be saved. Try again shortly.")
+    } finally {
+      setIsSaving(false)
     }
-    onAdd(group)
-    closeDialog()
   }
 
   return (
@@ -214,10 +219,10 @@ export function AddGroupDialog({ open, onClose, onAdd, profiles }: AddGroupDialo
           )}
 
           <div className="flex justify-end gap-2 border-t border-border pt-4">
-            <Button type="button" variant="ghost" onClick={closeDialog}>
+            <Button type="button" variant="ghost" onClick={closeDialog} disabled={isSaving}>
               Cancel
             </Button>
-            <Button type="submit">Add Group</Button>
+            <Button type="submit" disabled={isSaving}>{isSaving ? "Saving..." : "Add Group"}</Button>
           </div>
         </form>
       </div>
