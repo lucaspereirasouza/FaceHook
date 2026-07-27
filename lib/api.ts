@@ -230,10 +230,6 @@ export function getLogs(params: { limit?: number; level?: LogEntry["level"] } = 
   return request<LogEntry[]>(`/api/logs${toQuery(params)}`)
 }
 
-export function streamLogs() {
-  return new EventSource("/api/logs/stream")
-}
-
 export function retryFailedJobs() {
   return request<{ requeued: number }>("/api/queue/retry", { method: "POST" })
 }

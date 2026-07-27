@@ -1,10 +1,9 @@
 "use client"
 
-import { useEffect } from "react"
 import useSWR from "swr"
 import { Card, CardContent, CardHeader, CardTitle } from "@/app/components/ui/card"
 import { Badge } from "@/app/components/ui/badge"
-import { getLogs, getQueueStatus, getWorkers, streamLogs, type LogEntry, type WorkerState } from "@/lib/api"
+import { getLogs, getQueueStatus, getWorkers, type WorkerState } from "@/lib/api"
 import { cn } from "@/lib/utils"
 import { Cpu, Server, Bell, ListChecks, Timer } from "lucide-react"
 
@@ -34,18 +33,9 @@ const levelMeta = {
 export function MonitoringView() {
   const { data: workers = [] } = useSWR("workers", getWorkers, { refreshInterval: 30_000 })
   const { data: queue } = useSWR("queue", getQueueStatus, { refreshInterval: 10_000 })
-  const { data: logs = [], mutate: mutateLogs } = useSWR("logs", () => getLogs({ limit: 50 }), {
+  const { data: logs = [] } = useSWR("logs", () => getLogs({ limit: 50 }), {
     refreshInterval: 15_000,
   })
-
-  useEffect(() => {
-    const stream = streamLogs()
-    stream.onmessage = (event) => {
-      const log = JSON.parse(event.data) as LogEntry
-      void mutateLogs((current = []) => [log, ...current.filter((entry) => entry.id !== log.id)].slice(0, 50), false)
-    }
-    return () => stream.close()
-  }, [mutateLogs])
 
   return (
     <div className="space-y-6">
@@ -139,8 +129,8 @@ export function MonitoringView() {
         <Card className="lg:col-span-2">
           <CardHeader className="flex-row items-center justify-between">
             <CardTitle>Live Worker Logs</CardTitle>
-            <span className="flex items-center gap-1.5 text-xs text-success">
-              <span className="size-2 animate-pulse rounded-full bg-success" /> Streaming
+            <span className="text-xs text-muted-foreground">
+              Updated every 15s
             </span>
           </CardHeader>
           <CardContent>
