@@ -88,10 +88,12 @@ export interface LeadFilters {
 
 type RequestOptions = Omit<RequestInit, "body"> & { body?: unknown }
 
-function toQuery(params: Record<string, string | number | undefined>) {
+function toQuery(params: object) {
   const searchParams = new URLSearchParams()
   for (const [key, value] of Object.entries(params)) {
-    if (value !== undefined && value !== "") searchParams.set(key, String(value))
+    if ((typeof value === "string" || typeof value === "number") && value !== "") {
+      searchParams.set(key, String(value))
+    }
   }
   const query = searchParams.toString()
   return query ? `?${query}` : ""

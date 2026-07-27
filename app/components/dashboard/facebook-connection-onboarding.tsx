@@ -40,17 +40,17 @@ export function FacebookConnectionOnboarding({ reason }: FacebookConnectionOnboa
           <div className="mt-6 grid gap-3 border-y border-border py-5 text-sm sm:grid-cols-2">
             <div className="flex items-start gap-2.5">
               <CheckCircle2 className="mt-0.5 size-4 shrink-0 text-success" />
-              <span>Authorize access to the Facebook groups you manage.</span>
+              <span>Use a Facebook user access token that can read the groups you manage.</span>
             </div>
             <div className="flex items-start gap-2.5">
               <CheckCircle2 className="mt-0.5 size-4 shrink-0 text-success" />
-              <span>Return here automatically and enable monitoring.</span>
+              <span>Facebook verifies the token before monitoring is enabled.</span>
             </div>
           </div>
 
-          <div className="mt-6 flex flex-wrap items-center gap-3">
+          <div className="mt-6">
             <FacebookLoginButton reconnect={reconnectRequired} />
-            <p className="text-xs text-muted-foreground">Your Facebook access token is kept server-side.</p>
+            <p className="mt-3 text-xs text-muted-foreground">Your Facebook access token is kept server-side.</p>
           </div>
         </CardContent>
       </Card>

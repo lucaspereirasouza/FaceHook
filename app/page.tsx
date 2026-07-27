@@ -44,7 +44,7 @@ export default function Page() {
 
       <div className="flex min-w-0 flex-1 flex-col">
         {/* Topbar */}
-        <header className="flex h-16 shrink-0 items-center gap-4 border-b border-border bg-card px-6">
+        <header className="flex h-16 shrink-0 items-center gap-2 border-b border-border bg-card px-3 sm:gap-4 sm:px-6">
           <div className="min-w-0">
             <h1 className="truncate text-base font-semibold">{meta.title}</h1>
             <p className="truncate text-xs text-muted-foreground">{meta.subtitle}</p>
@@ -52,11 +52,11 @@ export default function Page() {
           <div className="ml-auto flex items-center gap-2">
             <Badge
               className={
-                facebookConnected
+                `${facebookConnected
                   ? "border-success/25 bg-success/15 text-success"
                   : facebookConnectionIssue
                     ? "border-warning/25 bg-warning/15 text-warning"
-                    : "border-border bg-muted text-muted-foreground"
+                    : "border-border bg-muted text-muted-foreground"} hidden sm:flex`
               }
             >
               {facebookConnected ? <CheckCircle2 className="size-3" /> : <Link2 className="size-3" />}
@@ -79,7 +79,7 @@ export default function Page() {
           </div>
         </header>
 
-        <main className="flex-1 overflow-y-auto p-6">
+        <main className="flex-1 overflow-y-auto p-3 sm:p-6">
         {isLoadingConnection ? (
           <div className="flex h-full items-center justify-center text-sm text-muted-foreground">Checking Facebook connection...</div>
         ) : !facebookConnected ? (

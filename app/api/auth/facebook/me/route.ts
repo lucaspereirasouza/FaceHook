@@ -2,16 +2,16 @@ import { NextRequest, NextResponse } from 'next/server';
 import {
   FACEBOOK_SESSION_COOKIE,
   getFacebookConnection,
-  getToken,
-  invalidateToken,
+  getFacebookSessionToken,
+  invalidateFacebookConnection,
 } from '@/lib/facebookStore';
 
 export async function GET(request: NextRequest) {
   const sessionId = request.cookies.get(FACEBOOK_SESSION_COOKIE)?.value;
-  let connection = getFacebookConnection(sessionId);
+  let connection = await getFacebookConnection(sessionId);
 
   if (connection.status === 'connected' && connection.account) {
-    const token = getToken(connection.account.id);
+    const token = await getFacebookSessionToken(sessionId);
     if (token) {
       try {
         const validationResponse = await fetch(
@@ -19,8 +19,8 @@ export async function GET(request: NextRequest) {
           { cache: 'no-store' }
         );
         if (validationResponse.status === 400 || validationResponse.status === 401) {
-          invalidateToken(token.userId);
-          connection = getFacebookConnection(sessionId);
+          await invalidateFacebookConnection(token.userId);
+          connection = await getFacebookConnection(sessionId);
         }
       } catch {
         // A temporary network error must not disconnect a working account.

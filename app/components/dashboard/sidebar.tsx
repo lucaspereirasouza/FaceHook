@@ -30,18 +30,18 @@ export function Sidebar({
   facebookConnected: boolean
 }) {
   return (
-    <aside className="flex h-full w-64 shrink-0 flex-col bg-sidebar text-sidebar-foreground">
-      <div className="flex h-16 items-center gap-2.5 border-b border-sidebar-border px-5">
+    <aside className="flex h-full w-14 shrink-0 flex-col bg-sidebar text-sidebar-foreground sm:w-64">
+      <div className="flex h-16 items-center justify-center border-b border-sidebar-border sm:justify-start sm:gap-2.5 sm:px-5">
         <div className="flex size-9 items-center justify-center rounded-lg bg-sidebar-primary text-sidebar-primary-foreground">
           <Radar className="size-5" />
         </div>
-        <div className="leading-tight">
+        <div className="hidden leading-tight sm:block">
           <p className="text-sm font-semibold text-sidebar-accent-foreground">Signalscope</p>
           <p className="text-xs text-sidebar-foreground/70">Lead Intelligence</p>
         </div>
       </div>
 
-      <nav className="flex-1 space-y-1 p-3" aria-label="Primary">
+      <nav className="flex-1 space-y-1 p-2 sm:p-3" aria-label="Primary">
         {nav.map((item) => {
           const active = view === item.id
           const Icon = item.icon
@@ -51,19 +51,21 @@ export function Sidebar({
               type="button"
               onClick={() => onChange(item.id)}
               aria-current={active ? "page" : undefined}
+              aria-label={item.label}
+              title={item.label}
               className={cn(
-                "flex w-full items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition-colors",
+                "flex w-full items-center justify-center rounded-lg px-2 py-2 text-sm font-medium transition-colors sm:justify-start sm:gap-3 sm:px-3",
                 active
                   ? "bg-sidebar-primary text-sidebar-primary-foreground"
                   : "text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground",
               )}
             >
               <Icon className="size-4 shrink-0" />
-              <span className="flex-1 text-left">{item.label}</span>
+              <span className="sr-only sm:not-sr-only sm:flex-1 sm:text-left">{item.label}</span>
               {item.badge && (
                 <span
                   className={cn(
-                    "rounded-full px-1.5 py-0.5 text-[10px] font-semibold",
+                    "hidden rounded-full px-1.5 py-0.5 text-[10px] font-semibold sm:block",
                     active
                       ? "bg-sidebar-primary-foreground/20 text-sidebar-primary-foreground"
                       : "bg-sidebar-primary/25 text-sidebar-accent-foreground",
@@ -77,19 +79,19 @@ export function Sidebar({
         })}
       </nav>
 
-      <div className="border-t border-sidebar-border p-3">
-        <div className="flex items-center gap-3 rounded-lg px-2 py-2">
+      <div className="border-t border-sidebar-border p-2 sm:p-3">
+        <div className="flex items-center justify-center rounded-lg px-2 py-2 sm:justify-start sm:gap-3">
           <div className="flex size-8 items-center justify-center rounded-full bg-sidebar-accent text-xs font-semibold text-sidebar-accent-foreground">
             AO
           </div>
-          <div className="min-w-0 leading-tight">
+          <div className="hidden min-w-0 leading-tight sm:block">
             <p className="truncate text-sm font-medium text-sidebar-accent-foreground">Alex Ortega</p>
             <p className="truncate text-xs text-sidebar-foreground/70">
               {facebookConnected ? "Facebook connected" : "Facebook connection required"}
             </p>
           </div>
           <span
-            className={cn("ml-auto flex size-2 rounded-full", facebookConnected ? "bg-success" : "bg-warning")}
+            className={cn("ml-auto hidden size-2 rounded-full sm:flex", facebookConnected ? "bg-success" : "bg-warning")}
             aria-hidden
           />
         </div>

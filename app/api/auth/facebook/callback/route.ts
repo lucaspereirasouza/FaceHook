@@ -4,8 +4,9 @@ import {
   createSession,
   FACEBOOK_OAUTH_STATE_COOKIE,
   FACEBOOK_SESSION_COOKIE,
-  saveToken,
+  saveFacebookConnection,
 } from '@/lib/facebookStore';
+import { getAppUrl } from '@/lib/app-url';
 
 export async function GET(request: NextRequest) {
   const { searchParams } = new URL(request.url);
@@ -13,29 +14,50 @@ export async function GET(request: NextRequest) {
   const error = searchParams.get('error');
   const state = searchParams.get('state');
   const stateCookie = request.cookies.get(FACEBOOK_OAUTH_STATE_COOKIE)?.value;
-  const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000';
+  let appUrl: string;
 
-  if (error || !code || !state || state !== stateCookie || !consumeOAuthState(state)) {
+  try {
+    appUrl = getAppUrl();
+  } catch {
+    return NextResponse.json({ error: 'server_configuration_error' }, { status: 500 });
+  }
+  const redirectUri = `${appUrl}/api/auth/facebook/callback`;
+
+  if (error || !code || !state || state !== stateCookie) {
     return NextResponse.redirect(
       `${appUrl}?error=facebook_auth_failed`
     );
   }
 
-  const clientId = process.env.FACEBOOK_CLIENT_ID;
-  const clientSecret = process.env.FACEBOOK_CLIENT_SECRET;
-  const redirectUri = `${process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'}/api/auth/facebook/callback`;
+  try {
+    if (!(await consumeOAuthState(state, redirectUri))) {
+      return NextResponse.redirect(`${appUrl}?error=facebook_auth_failed`);
+    }
+  } catch {
+    return NextResponse.redirect(`${appUrl}?error=facebook_storage_unavailable`);
+  }
+
+  const clientId = process.env.FACEBOOK_CLIENT_ID?.trim();
+  const clientSecret = process.env.FACEBOOK_CLIENT_SECRET?.trim();
+  if (!clientId || !/^\d+$/.test(clientId) || !clientSecret) {
+    return NextResponse.redirect(`${appUrl}?error=facebook_oauth_not_configured`);
+  }
 
   try {
-    // Exchange authorization code for an access token
-    const tokenUrl = `https://graph.facebook.com/v19.0/oauth/access_token?client_id=${clientId}&redirect_uri=${encodeURIComponent(
-      redirectUri
-    )}&client_secret=${clientSecret}&code=${code}`;
-
-    const tokenRes = await fetch(tokenUrl);
+    const tokenRes = await fetch('https://graph.facebook.com/v19.0/oauth/access_token', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+      body: new URLSearchParams({
+        client_id: clientId,
+        client_secret: clientSecret,
+        redirect_uri: redirectUri,
+        code,
+      }),
+      cache: 'no-store',
+    });
     const tokenData = await tokenRes.json();
 
-    if (tokenData.error) {
-      console.error('Facebook OAuth Error:', tokenData.error);
+    if (!tokenRes.ok || typeof tokenData.access_token !== 'string' || !tokenData.access_token) {
       return NextResponse.redirect(
         `${appUrl}?error=facebook_auth_failed`
       );
@@ -45,18 +67,17 @@ export async function GET(request: NextRequest) {
 
     // Fetch basic user profile info from Facebook Graph API
     const userUrl = `https://graph.facebook.com/me?fields=id,name,email&access_token=${accessToken}`;
-    const userRes = await fetch(userUrl);
+    const userRes = await fetch(userUrl, { cache: 'no-store' });
     const userData = await userRes.json();
 
-    // Tokens remain server-side; the browser receives only an opaque session identifier.
-    if (userData && userData.id) {
-      saveToken(userData.id, {
-        userId: userData.id,
-        name: userData.name,
+    if (userRes.ok && userData && typeof userData.id === 'string' && userData.id) {
+      const { userId } = await saveFacebookConnection({
+        facebookUserId: userData.id,
+        name: typeof userData.name === 'string' ? userData.name : undefined,
         accessToken,
         expiresAt: tokenData.expires_in ? Date.now() + tokenData.expires_in * 1000 : undefined,
       });
-      const sessionId = createSession(userData.id);
+      const sessionId = await createSession(userId);
       const response = NextResponse.redirect(`${appUrl}?facebook=connected`);
       response.cookies.set(FACEBOOK_SESSION_COOKIE, sessionId, {
         httpOnly: true,
@@ -70,10 +91,9 @@ export async function GET(request: NextRequest) {
     }
 
     return NextResponse.redirect(`${appUrl}?error=facebook_profile_failed`);
-  } catch (err) {
-    console.error('Callback Handler Error:', err);
+  } catch {
     return NextResponse.redirect(
-      `${appUrl}?error=facebook_auth_failed`
+      `${appUrl}?error=facebook_storage_unavailable`
     );
   }
 }
