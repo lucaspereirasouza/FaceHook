@@ -1,6 +1,6 @@
 import "server-only"
 
-import type { BusinessProfile, MonitoredGroup } from "@/lib/mock-data"
+import type { BusinessProfile, Lead, LogEntry, MonitoredGroup, WorkerInfo } from "@/lib/mock-data"
 
 type DataRecord = Record<string, unknown>
 
@@ -51,6 +51,57 @@ export function toMonitoredGroup(record: DataRecord, profiles: string[]): Monito
     status: stringValue(record.status, "paused") as MonitoredGroup["status"],
     postsCollected: Number(record.posts_collected) || 0,
     errors: Number(record.errors) || 0,
+  }
+}
+
+function initials(value: string) {
+  return value.split(/\s+/).filter(Boolean).slice(0, 2).map((word) => word[0]?.toUpperCase()).join("")
+}
+
+export function toLead(record: DataRecord, post: DataRecord | undefined, groupName: string): Lead {
+  const author = stringValue(post?.author_name, "Unknown author")
+
+  return {
+    id: stringValue(record.id),
+    author,
+    authorAvatar: initials(author),
+    groupName,
+    content: stringValue(post?.content),
+    images: Number(post?.attachment_count) || 0,
+    score: Number(record.score) || 0,
+    confidence: Number(record.confidence) || 0,
+    service: stringValue(record.service),
+    location: stringValue(record.location),
+    urgency: stringValue(record.urgency, "Low") as Lead["urgency"],
+    summary: stringValue(record.summary),
+    recommendedResponse: stringValue(record.recommended_response),
+    matchedProfile: stringValue(record.matched_profile_name),
+    contactInfo: stringValue(record.contact_info),
+    status: stringValue(record.status, "New") as Lead["status"],
+    createdAt: toRelativeTime(record.created_at),
+    facebookUrl: stringValue(post?.facebook_url),
+  }
+}
+
+export function toWorkerInfo(record: DataRecord): WorkerInfo {
+  return {
+    id: stringValue(record.id),
+    name: stringValue(record.name),
+    role: stringValue(record.role),
+    state: stringValue(record.state, "down") as WorkerInfo["state"],
+    lastPoll: toRelativeTime(record.last_poll_at),
+    avgProcessingMs: Number(record.avg_processing_ms) || 0,
+    processedToday: Number(record.processed_today) || 0,
+  }
+}
+
+export function toLogEntry(record: DataRecord, workerName: string): LogEntry {
+  return {
+    id: stringValue(record.id),
+    time: toRelativeTime(record.logged_at),
+    level: stringValue(record.level, "info") as LogEntry["level"],
+    worker: workerName,
+    message: stringValue(record.message),
   }
 }
 
