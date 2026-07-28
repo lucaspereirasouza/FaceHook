@@ -7,6 +7,7 @@ import { Badge } from "@/app/components/ui/badge"
 import { Button } from "@/app/components/ui/button"
 import { listGroups, listProfiles, type GroupStatus, type MonitoredGroup } from "@/lib/api"
 import { AddGroupDialog } from "@/app/components/dashboard/add-group-dialog"
+import { ConfigureGroupDialog } from "@/app/components/dashboard/configure-group-dialog"
 import { Plus, ExternalLink, Clock, AlertCircle, CheckCircle2, PauseCircle } from "lucide-react"
 
 function statusMeta(status: GroupStatus) {
@@ -24,9 +25,14 @@ export function GroupsView() {
   const { data: groups = [], mutate: mutateGroups } = useSWR("groups", listGroups)
   const { data: businessProfiles = [] } = useSWR("profiles", listProfiles)
   const [dialogOpen, setDialogOpen] = useState(false)
+  const [configuredGroup, setConfiguredGroup] = useState<MonitoredGroup | null>(null)
 
   function handleAdd(group: MonitoredGroup) {
     void mutateGroups((current = []) => [group, ...current], false)
+  }
+
+  function handleUpdate(updatedGroup: MonitoredGroup) {
+    void mutateGroups((current = []) => current.map((group) => group.id === updatedGroup.id ? updatedGroup : group), false)
   }
 
   return (
@@ -48,6 +54,12 @@ export function GroupsView() {
         onClose={() => setDialogOpen(false)}
         onAdd={handleAdd}
         profiles={businessProfiles}
+      />
+      <ConfigureGroupDialog
+        group={configuredGroup}
+        profiles={businessProfiles}
+        onClose={() => setConfiguredGroup(null)}
+        onSave={handleUpdate}
       />
 
       <div className="grid gap-4 md:grid-cols-2">
@@ -108,7 +120,7 @@ export function GroupsView() {
                     <Button size="sm" variant="outline">
                       {group.enabled ? "Pause" : "Resume"}
                     </Button>
-                    <Button size="sm" variant="ghost">
+                    <Button size="sm" variant="ghost" onClick={() => setConfiguredGroup(group)}>
                       Configure
                     </Button>
                   </div>
