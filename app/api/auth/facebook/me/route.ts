@@ -16,7 +16,7 @@ export async function GET(request: NextRequest) {
       try {
         const validationResponse = await fetch(
           `https://graph.facebook.com/me?fields=id&access_token=${encodeURIComponent(token.accessToken)}`,
-          { cache: 'no-store' }
+          { cache: 'no-store', signal: AbortSignal.timeout(5_000) }
         );
         if (validationResponse.status === 400 || validationResponse.status === 401) {
           await invalidateFacebookConnection(token.userId);

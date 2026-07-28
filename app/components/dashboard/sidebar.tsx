@@ -85,7 +85,7 @@ export function Sidebar({
             AO
           </div>
           <div className="hidden min-w-0 leading-tight sm:block">
-            <p className="truncate text-sm font-medium text-sidebar-accent-foreground">Alex Ortega</p>
+            <p className="truncate text-sm font-medium text-sidebar-accent-foreground">Facebook User</p>
             <p className="truncate text-xs text-sidebar-foreground/70">
               {facebookConnected ? "Facebook connected" : "Facebook connection required"}
             </p>

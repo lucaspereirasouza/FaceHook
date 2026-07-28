@@ -1,14 +1,21 @@
 "use client"
 
+import { useState } from "react"
 import useSWR from "swr"
 import { Card, CardContent } from "@/app/components/ui/card"
 import { Badge } from "@/app/components/ui/badge"
 import { Button } from "@/app/components/ui/button"
-import { listProfiles } from "@/lib/api"
+import { type BusinessProfile, listProfiles } from "@/lib/api"
+import { AddProfileDialog } from "@/app/components/dashboard/add-profile-dialog"
 import { Plus, MapPin, Webhook, Sparkles, Ban } from "lucide-react"
 
 export function ProfilesView() {
-  const { data: businessProfiles = [] } = useSWR("profiles", listProfiles)
+  const { data: businessProfiles = [], mutate: mutateProfiles } = useSWR("profiles", listProfiles)
+  const [dialogOpen, setDialogOpen] = useState(false)
+
+  function handleAdd(profile: BusinessProfile) {
+    void mutateProfiles((current = []) => [profile, ...current], false)
+  }
 
   return (
     <div className="space-y-6">
@@ -19,10 +26,22 @@ export function ProfilesView() {
             Reusable AI configurations. The classifier matches every post against enabled profiles.
           </p>
         </div>
-        <Button>
+        <Button onClick={() => setDialogOpen(true)}>
           <Plus className="size-4" /> New Profile
         </Button>
       </div>
+
+      <AddProfileDialog open={dialogOpen} onClose={() => setDialogOpen(false)} onAdd={handleAdd} />
+
+      {businessProfiles.length === 0 && (
+        <div className="border-y border-dashed border-border py-14 text-center">
+          <p className="text-sm font-medium">No business profiles yet</p>
+          <p className="mt-1 text-sm text-muted-foreground">Create a profile before assigning it to a Facebook group.</p>
+          <Button className="mt-4" size="sm" onClick={() => setDialogOpen(true)}>
+            <Plus className="size-3.5" /> Create Profile
+          </Button>
+        </div>
+      )}
 
       <div className="grid gap-4 lg:grid-cols-2">
         {businessProfiles.map((p) => (
