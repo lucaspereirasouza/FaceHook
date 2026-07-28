@@ -36,6 +36,7 @@ export function ConfigureGroupDialog({ group, profiles, onClose, onSave }: Confi
   }, [group])
 
   if (!group) return null
+  const groupId = group.id
 
   function closeDialog() {
     if (!isSaving) onClose()
@@ -63,7 +64,7 @@ export function ConfigureGroupDialog({ group, profiles, onClose, onSave }: Confi
     setIsSaving(true)
     setError(null)
     try {
-      const updatedGroup = await updateGroup(group.id, {
+      const updatedGroup = await updateGroup(groupId, {
         name: name.trim(),
         url: url.trim().startsWith("http") ? url.trim() : `https://${url.trim()}`,
         intervalMinutes: interval,
