@@ -6,7 +6,8 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "eslint ."
+    "lint": "eslint .",
+    "verify:live-supabase": "node --env-file-if-exists=.env.local scripts/verify-live-supabase.mjs"
   },
   "dependencies": {
     "@achchiraj/facebook-api": "^1.0.10",

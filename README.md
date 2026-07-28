@@ -47,3 +47,13 @@ Before deployment:
 - Configure `NEXT_PUBLIC_APP_URL` to the exact HTTPS application origin and register its `/api/auth/facebook/callback` path with Meta.
 - Set `SUPABASE_SERVICE_ROLE_KEY` only in server-side deployment secrets; it must never have a `NEXT_PUBLIC_` prefix.
 - Enable a secret-scanning check in the repository host and run `pnpm lint` plus `pnpm build` in CI.
+
+## Live Supabase Verification
+
+With the application running locally and `.env.local` configured, provide `FACEHOOK_TEST_ACCESS_TOKEN` for a dedicated Meta test account only for the command invocation:
+
+```bash
+FACEHOOK_TEST_ACCESS_TOKEN=your-test-token pnpm verify:live-supabase
+```
+
+The verifier authenticates through the application, confirms protected API access, and checks that Supabase contains encrypted Facebook token data and a hashed opaque session value. It never prints tokens, cookies, service-role keys, or database credential values. Use a non-production Supabase project because the test creates a real app session for the supplied Facebook account.
