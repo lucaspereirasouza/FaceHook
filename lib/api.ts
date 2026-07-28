@@ -125,6 +125,10 @@ export function getFacebookConnection() {
   return request<FacebookConnection>("/api/auth/facebook/me")
 }
 
+export function logoutFacebook() {
+  return request<{ loggedOut: true }>("/api/auth/facebook/logout", { method: "POST" })
+}
+
 export function getTrend(days = 14) {
   return request<TrendPoint[]>(`/api/stats/trend${toQuery({ days })}`)
 }

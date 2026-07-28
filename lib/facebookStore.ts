@@ -186,6 +186,18 @@ export async function createSession(userId: string) {
   return sessionToken
 }
 
+export async function revokeSession(sessionToken?: string) {
+  if (!sessionToken) return
+
+  const { error } = await getSupabaseAdmin()
+    .from("app_sessions")
+    .update({ revoked_at: new Date().toISOString() })
+    .eq("token_hash", hashOpaqueValue(sessionToken))
+    .is("revoked_at", null)
+
+  if (error) throw error
+}
+
 export async function createOAuthState(redirectUri: string) {
   const state = randomBytes(32).toString("base64url")
   const { error } = await getSupabaseAdmin().from("facebook_oauth_states").insert({

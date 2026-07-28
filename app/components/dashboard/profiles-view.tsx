@@ -7,14 +7,20 @@ import { Badge } from "@/app/components/ui/badge"
 import { Button } from "@/app/components/ui/button"
 import { type BusinessProfile, listProfiles } from "@/lib/api"
 import { AddProfileDialog } from "@/app/components/dashboard/add-profile-dialog"
+import { ConfigureProfileDialog } from "@/app/components/dashboard/configure-profile-dialog"
 import { Plus, MapPin, Webhook, Sparkles, Ban } from "lucide-react"
 
 export function ProfilesView() {
   const { data: businessProfiles = [], mutate: mutateProfiles } = useSWR("profiles", listProfiles)
   const [dialogOpen, setDialogOpen] = useState(false)
+  const [configuredProfile, setConfiguredProfile] = useState<BusinessProfile | null>(null)
 
   function handleAdd(profile: BusinessProfile) {
     void mutateProfiles((current = []) => [profile, ...current], false)
+  }
+
+  function handleUpdate(profile: BusinessProfile) {
+    void mutateProfiles((current = []) => current.map((currentProfile) => currentProfile.id === profile.id ? profile : currentProfile), false)
   }
 
   return (
@@ -32,6 +38,7 @@ export function ProfilesView() {
       </div>
 
       <AddProfileDialog open={dialogOpen} onClose={() => setDialogOpen(false)} onAdd={handleAdd} />
+      {configuredProfile && <ConfigureProfileDialog key={configuredProfile.id} profile={configuredProfile} onClose={() => setConfiguredProfile(null)} onSave={handleUpdate} />}
 
       {businessProfiles.length === 0 && (
         <div className="border-y border-dashed border-border py-14 text-center">
@@ -121,8 +128,8 @@ export function ProfilesView() {
                 <span className="flex items-center gap-1">
                   <Webhook className="size-3.5" /> {p.discordWebhook.split("/").pop()}
                 </span>
-                <Button size="sm" variant="ghost" className="ml-auto">
-                  Edit
+                <Button size="sm" variant="ghost" className="ml-auto" onClick={() => setConfiguredProfile(p)}>
+                  Configure
                 </Button>
               </div>
             </CardContent>

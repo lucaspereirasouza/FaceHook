@@ -1,7 +1,7 @@
 "use client"
 
 import { useState } from "react"
-import useSWR from "swr"
+import useSWR, { useSWRConfig } from "swr"
 import { Sidebar, type View } from "@/app/components/dashboard/sidebar"
 import { FacebookConnectionOnboarding } from "@/app/components/dashboard/facebook-connection-onboarding"
 import { Overview } from "@/app/components/dashboard/overview"
@@ -11,8 +11,8 @@ import { LeadsView } from "@/app/components/dashboard/leads-view"
 import { MonitoringView } from "@/app/components/dashboard/monitoring-view"
 import { Badge } from "@/app/components/ui/badge"
 import { Button } from "@/app/components/ui/button"
-import { getFacebookConnection } from "@/lib/api"
-import { Search, Bell, CheckCircle2, Link2, RefreshCw } from "lucide-react"
+import { getFacebookConnection, listLeads, logoutFacebook, type Lead } from "@/lib/api"
+import { Search, Bell, CheckCircle2, Link2, RefreshCw, LoaderCircle, X } from "lucide-react"
 
 const titles: Record<View, { title: string; subtitle: string }> = {
   overview: { title: "Overview", subtitle: "Pipeline metrics across every monitored source" },
@@ -24,6 +24,10 @@ const titles: Record<View, { title: string; subtitle: string }> = {
 
 export default function Page() {
   const [view, setView] = useState<View>("overview")
+  const [notificationsOpen, setNotificationsOpen] = useState(false)
+  const [isRefreshing, setIsRefreshing] = useState(false)
+  const [isLoggingOut, setIsLoggingOut] = useState(false)
+  const { mutate } = useSWRConfig()
   const { data: facebookConnection, isLoading: isLoadingConnection } = useSWR(
     "facebook-connection",
     getFacebookConnection,
@@ -32,15 +36,36 @@ export default function Page() {
   const meta = titles[view]
   const facebookConnected = facebookConnection?.status === "connected"
   const facebookConnectionIssue = facebookConnection?.status === "expired" || facebookConnection?.status === "invalid"
+  const { data: newLeads } = useSWR(facebookConnected ? ["leads", "notifications"] : null, () => listLeads({ status: "New", page: 1 }))
   const onboardingReason = facebookConnection?.status === "expired"
     ? "expired"
     : facebookConnection?.status === "invalid"
       ? "invalid"
       : "not_connected"
 
+  async function handleRefresh() {
+    setIsRefreshing(true)
+    try {
+      await mutate(() => true, undefined, { revalidate: true })
+    } finally {
+      setIsRefreshing(false)
+    }
+  }
+
+  async function handleLogout() {
+    setIsLoggingOut(true)
+    try {
+      await logoutFacebook()
+      await mutate("facebook-connection")
+      setView("overview")
+    } finally {
+      setIsLoggingOut(false)
+    }
+  }
+
   return (
     <div className="flex h-screen overflow-hidden bg-background">
-      <Sidebar view={view} onChange={setView} facebookConnected={facebookConnected} />
+      <Sidebar view={view} onChange={setView} facebookConnected={facebookConnected} facebookName={facebookConnection?.account?.name} onLogout={() => void handleLogout()} isLoggingOut={isLoggingOut} />
 
       <div className="flex min-w-0 flex-1 flex-col">
         {/* Topbar */}
@@ -69,13 +94,14 @@ export default function Page() {
                 className="h-8 w-56 rounded-lg border border-border bg-background pl-8 pr-3 text-sm outline-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/30"
               />
             </div>
-            <Button size="icon" variant="outline" aria-label="Refresh">
-              <RefreshCw className="size-4" />
+            <Button size="icon" variant="outline" aria-label="Refresh dashboard" title="Refresh dashboard" onClick={() => void handleRefresh()} disabled={isRefreshing}>
+              {isRefreshing ? <LoaderCircle className="size-4 animate-spin" /> : <RefreshCw className="size-4" />}
             </Button>
-            <Button size="icon" variant="outline" aria-label="Notifications" className="relative">
+            <Button size="icon" variant="outline" aria-label="Notifications" title="Notifications" className="relative" onClick={() => setNotificationsOpen((open) => !open)}>
               <Bell className="size-4" />
-              <span className="absolute right-1.5 top-1.5 size-1.5 rounded-full bg-primary" />
+              {(newLeads?.total ?? 0) > 0 && <span className="absolute right-1.5 top-1.5 size-1.5 rounded-full bg-primary" />}
             </Button>
+            {notificationsOpen && <NotificationPanel leads={newLeads?.items ?? []} total={newLeads?.total ?? 0} onClose={() => setNotificationsOpen(false)} onViewLeads={() => { setView("leads"); setNotificationsOpen(false) }} />}
           </div>
         </header>
 
@@ -95,6 +121,19 @@ export default function Page() {
         )}
         </main>
       </div>
+    </div>
+  )
+}
+
+function NotificationPanel({ leads, total, onClose, onViewLeads }: { leads: Lead[]; total: number; onClose: () => void; onViewLeads: () => void }) {
+  return (
+    <div className="absolute right-3 top-14 z-30 w-[min(24rem,calc(100vw-1.5rem))] border border-border bg-card p-3 shadow-xl sm:right-6" role="dialog" aria-label="New lead notifications">
+      <div className="flex items-center justify-between gap-3"><div><p className="text-sm font-semibold">New leads</p><p className="text-xs text-muted-foreground">{total} awaiting review</p></div><Button size="icon-xs" variant="ghost" onClick={onClose} aria-label="Close notifications"><X className="size-3.5" /></Button></div>
+      <div className="mt-3 max-h-80 space-y-2 overflow-y-auto">
+        {leads.map((lead) => <button key={lead.id} type="button" onClick={onViewLeads} className="w-full border border-border p-3 text-left transition-colors hover:bg-muted"><p className="truncate text-sm font-medium">{lead.service} · {lead.score}/10</p><p className="mt-1 line-clamp-2 text-xs text-muted-foreground">{lead.summary}</p></button>)}
+        {leads.length === 0 && <p className="py-5 text-center text-sm text-muted-foreground">No new leads right now.</p>}
+      </div>
+      {total > 0 && <Button variant="ghost" size="sm" className="mt-2 w-full" onClick={onViewLeads}>View all leads</Button>}
     </div>
   )
 }

@@ -1,13 +1,13 @@
 "use client"
 
-import { useEffect, useState } from "react"
+import { useState } from "react"
 import { Badge } from "@/app/components/ui/badge"
 import { Button } from "@/app/components/ui/button"
 import { updateGroup, type BusinessProfile, type MonitoredGroup } from "@/lib/api"
 import { Check, Settings2, X } from "lucide-react"
 
 interface ConfigureGroupDialogProps {
-  group: MonitoredGroup | null
+  group: MonitoredGroup
   profiles: BusinessProfile[]
   onClose: () => void
   onSave: (group: MonitoredGroup) => void
@@ -17,25 +17,13 @@ const intervalOptions = [15, 30, 45, 60]
 const inputClassName = "w-full rounded-md border border-input bg-background px-3 py-2 text-sm outline-none focus-visible:border-ring focus-visible:ring-2 focus-visible:ring-ring/40"
 
 export function ConfigureGroupDialog({ group, profiles, onClose, onSave }: ConfigureGroupDialogProps) {
-  const [name, setName] = useState("")
-  const [url, setUrl] = useState("")
-  const [interval, setInterval] = useState(30)
-  const [selectedProfiles, setSelectedProfiles] = useState<string[]>([])
-  const [enabled, setEnabled] = useState(true)
+  const [name, setName] = useState(group.name)
+  const [url, setUrl] = useState(group.url)
+  const [interval, setInterval] = useState(group.intervalMinutes)
+  const [selectedProfiles, setSelectedProfiles] = useState(group.profiles)
+  const [enabled, setEnabled] = useState(group.enabled)
   const [error, setError] = useState<string | null>(null)
   const [isSaving, setIsSaving] = useState(false)
-
-  useEffect(() => {
-    if (!group) return
-    setName(group.name)
-    setUrl(group.url)
-    setInterval(group.intervalMinutes)
-    setSelectedProfiles(group.profiles)
-    setEnabled(group.enabled)
-    setError(null)
-  }, [group])
-
-  if (!group) return null
   const groupId = group.id
 
   function closeDialog() {

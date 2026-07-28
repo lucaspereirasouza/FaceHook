@@ -5,7 +5,7 @@ import useSWR from "swr"
 import { Card, CardContent } from "@/app/components/ui/card"
 import { Badge } from "@/app/components/ui/badge"
 import { Button } from "@/app/components/ui/button"
-import { listGroups, listProfiles, type GroupStatus, type MonitoredGroup } from "@/lib/api"
+import { listGroups, listProfiles, toggleGroup, type GroupStatus, type MonitoredGroup } from "@/lib/api"
 import { AddGroupDialog } from "@/app/components/dashboard/add-group-dialog"
 import { ConfigureGroupDialog } from "@/app/components/dashboard/configure-group-dialog"
 import { Plus, ExternalLink, Clock, AlertCircle, CheckCircle2, PauseCircle } from "lucide-react"
@@ -26,6 +26,7 @@ export function GroupsView() {
   const { data: businessProfiles = [] } = useSWR("profiles", listProfiles)
   const [dialogOpen, setDialogOpen] = useState(false)
   const [configuredGroup, setConfiguredGroup] = useState<MonitoredGroup | null>(null)
+  const [updatingGroupId, setUpdatingGroupId] = useState<string | null>(null)
 
   function handleAdd(group: MonitoredGroup) {
     void mutateGroups((current = []) => [group, ...current], false)
@@ -33,6 +34,16 @@ export function GroupsView() {
 
   function handleUpdate(updatedGroup: MonitoredGroup) {
     void mutateGroups((current = []) => current.map((group) => group.id === updatedGroup.id ? updatedGroup : group), false)
+  }
+
+  async function handleToggle(group: MonitoredGroup) {
+    setUpdatingGroupId(group.id)
+    try {
+      const updatedGroup = await toggleGroup(group.id, !group.enabled)
+      handleUpdate(updatedGroup)
+    } finally {
+      setUpdatingGroupId(null)
+    }
   }
 
   return (
@@ -55,12 +66,15 @@ export function GroupsView() {
         onAdd={handleAdd}
         profiles={businessProfiles}
       />
-      <ConfigureGroupDialog
-        group={configuredGroup}
-        profiles={businessProfiles}
-        onClose={() => setConfiguredGroup(null)}
-        onSave={handleUpdate}
-      />
+      {configuredGroup && (
+        <ConfigureGroupDialog
+          key={configuredGroup.id}
+          group={configuredGroup}
+          profiles={businessProfiles}
+          onClose={() => setConfiguredGroup(null)}
+          onSave={handleUpdate}
+        />
+      )}
 
       <div className="grid gap-4 md:grid-cols-2">
         {groups.map((group) => {
@@ -117,7 +131,7 @@ export function GroupsView() {
                 <div className="mt-4 flex items-center justify-between">
                   <span className="text-xs text-muted-foreground">Last scan {group.lastScan}</span>
                   <div className="flex gap-2">
-                    <Button size="sm" variant="outline">
+                    <Button size="sm" variant="outline" onClick={() => void handleToggle(group)} disabled={updatingGroupId === group.id}>
                       {group.enabled ? "Pause" : "Resume"}
                     </Button>
                     <Button size="sm" variant="ghost" onClick={() => setConfiguredGroup(group)}>

@@ -8,7 +8,9 @@ import {
   Target,
   Activity,
   Radar,
+  LogOut,
 } from "lucide-react"
+import { Button } from "@/app/components/ui/button"
 
 export type View = "overview" | "groups" | "profiles" | "leads" | "monitoring"
 
@@ -24,10 +26,16 @@ export function Sidebar({
   view,
   onChange,
   facebookConnected,
+  facebookName,
+  onLogout,
+  isLoggingOut,
 }: {
   view: View
   onChange: (v: View) => void
   facebookConnected: boolean
+  facebookName?: string
+  onLogout: () => void
+  isLoggingOut: boolean
 }) {
   return (
     <aside className="flex h-full w-14 shrink-0 flex-col bg-sidebar text-sidebar-foreground sm:w-64">
@@ -85,7 +93,7 @@ export function Sidebar({
             AO
           </div>
           <div className="hidden min-w-0 leading-tight sm:block">
-            <p className="truncate text-sm font-medium text-sidebar-accent-foreground">Facebook User</p>
+            <p className="truncate text-sm font-medium text-sidebar-accent-foreground">{facebookName ?? "Facebook User"}</p>
             <p className="truncate text-xs text-sidebar-foreground/70">
               {facebookConnected ? "Facebook connected" : "Facebook connection required"}
             </p>
@@ -94,6 +102,7 @@ export function Sidebar({
             className={cn("ml-auto hidden size-2 rounded-full sm:flex", facebookConnected ? "bg-success" : "bg-warning")}
             aria-hidden
           />
+          {facebookConnected && <Button size="icon-xs" variant="ghost" onClick={onLogout} disabled={isLoggingOut} aria-label="Log out of Facebook" title="Log out of Facebook"><LogOut className="size-3.5" /></Button>}
         </div>
       </div>
     </aside>
