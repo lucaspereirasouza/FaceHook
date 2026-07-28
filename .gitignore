@@ -30,6 +30,8 @@ yarn-debug.log*
 yarn-error.log*
 .pnpm-debug.log*
 
+lead-intelligence-platform.zip
+
 node_modules/
 
 # env files (can opt-in for committing if needed)
