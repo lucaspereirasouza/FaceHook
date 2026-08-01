@@ -7,43 +7,17 @@ import {
   saveFacebookConnection,
   SESSION_MAX_AGE_SECONDS,
 } from '@/lib/facebookStore';
+import { validateFacebookGroupToken } from '@/lib/facebookGraph';
 import { getAppUrl } from '@/lib/app-url';
 
-type FacebookUser = {
-  id?: string;
-  name?: string;
-};
-
-type TokenValidationResult =
-  | { status: 'valid'; user: Required<Pick<FacebookUser, 'id'>> & FacebookUser }
-  | { status: 'invalid' }
-  | { status: 'unavailable' };
-
-async function validateAccessToken(accessToken: string): Promise<TokenValidationResult> {
-  try {
-    const userResponse = await fetch(
-      `https://graph.facebook.com/me?fields=id,name&access_token=${encodeURIComponent(accessToken)}`,
-      { cache: 'no-store' },
-    );
-    const userData = (await userResponse.json()) as FacebookUser;
-
-    if (!userResponse.ok || !userData.id) {
-      return { status: 'invalid' };
-    }
-
-    return { status: 'valid', user: userData as Required<Pick<FacebookUser, 'id'>> & FacebookUser };
-  } catch {
-    return { status: 'unavailable' };
-  }
-}
-
-async function setFacebookSession(response: NextResponse, user: FacebookUser, accessToken: string) {
+async function setFacebookSession(response: NextResponse, user: { id?: string; name?: string }, accessToken: string, scopes: string[]) {
   if (!user.id) return response;
 
   const { userId } = await saveFacebookConnection({
     facebookUserId: user.id,
     name: user.name,
     accessToken,
+    scopes,
   });
 
   const sessionId = await createSession(userId);
@@ -122,7 +96,7 @@ export async function POST(request: Request) {
     );
   }
 
-  const validation = await validateAccessToken(accessToken.trim());
+  const validation = await validateFacebookGroupToken(accessToken.trim());
 
   if (validation.status === 'invalid') {
     return NextResponse.json(
@@ -138,6 +112,16 @@ export async function POST(request: Request) {
     );
   }
 
+  if (validation.status === 'missing_group_permission') {
+    return NextResponse.json(
+      {
+        error: 'facebook_group_permission_required',
+        message: 'This token needs the groups_access_member_info permission. Generate a token for this app with that permission granted, then try again.',
+      },
+      { status: 403 },
+    );
+  }
+
   try {
     return await setFacebookSession(
       NextResponse.json({
@@ -146,6 +130,7 @@ export async function POST(request: Request) {
       }),
       validation.user,
       accessToken.trim(),
+      validation.scopes,
     );
   } catch {
     return NextResponse.json({ error: 'facebook_storage_unavailable' }, { status: 503 });

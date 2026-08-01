@@ -6,6 +6,7 @@ import {
   FACEBOOK_SESSION_COOKIE,
   saveFacebookConnection,
 } from '@/lib/facebookStore';
+import { validateFacebookGroupToken } from '@/lib/facebookGraph';
 import { getAppUrl } from '@/lib/app-url';
 
 export async function GET(request: NextRequest) {
@@ -65,17 +66,15 @@ export async function GET(request: NextRequest) {
 
     const accessToken = tokenData.access_token;
 
-    // Fetch basic user profile info from Facebook Graph API
-    const userUrl = `https://graph.facebook.com/me?fields=id,name,email&access_token=${accessToken}`;
-    const userRes = await fetch(userUrl, { cache: 'no-store' });
-    const userData = await userRes.json();
+    const validation = await validateFacebookGroupToken(accessToken);
 
-    if (userRes.ok && userData && typeof userData.id === 'string' && userData.id) {
+    if (validation.status === 'valid') {
       const { userId } = await saveFacebookConnection({
-        facebookUserId: userData.id,
-        name: typeof userData.name === 'string' ? userData.name : undefined,
+        facebookUserId: validation.user.id,
+        name: validation.user.name,
         accessToken,
         expiresAt: tokenData.expires_in ? Date.now() + tokenData.expires_in * 1000 : undefined,
+        scopes: validation.scopes,
       });
       const sessionId = await createSession(userId);
       const response = NextResponse.redirect(`${appUrl}?facebook=connected`);
@@ -88,6 +87,10 @@ export async function GET(request: NextRequest) {
       });
       response.cookies.delete(FACEBOOK_OAUTH_STATE_COOKIE);
       return response;
+    }
+
+    if (validation.status === 'missing_group_permission') {
+      return NextResponse.redirect(`${appUrl}?error=facebook_group_permission_required`);
     }
 
     return NextResponse.redirect(`${appUrl}?error=facebook_profile_failed`);

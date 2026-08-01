@@ -126,11 +126,13 @@ export async function saveFacebookConnection({
   name,
   accessToken,
   expiresAt,
+  scopes = [],
 }: {
   facebookUserId: string
   name?: string
   accessToken: string
   expiresAt?: number
+  scopes?: string[]
 }) {
   const admin = getSupabaseAdmin()
   let userId = await getOrCreateAppUser(facebookUserId, name)
@@ -139,6 +141,7 @@ export async function saveFacebookConnection({
     facebook_name: name ?? null,
     access_token_encrypted: encryptServerSecret(accessToken),
     token_encryption_key_version: "v1",
+    scopes,
     status: "connected" as const,
     expires_at: toExpiresAt(expiresAt),
     invalidated_at: null,

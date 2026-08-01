@@ -2,6 +2,8 @@ import { NextRequest, NextResponse } from "next/server"
 
 import { badRequestResponse, getDashboardUserId, internalServerErrorResponse, unauthorizedResponse } from "@/lib/dashboard-api"
 import { asStringList, toMonitoredGroup } from "@/lib/dashboard-models"
+import { resolveFacebookGroup } from "@/lib/facebookGraph"
+import { getFacebookAccessTokenForUser } from "@/lib/facebookStore"
 import { getSupabaseAdmin } from "@/lib/supabase"
 
 function parseFacebookGroupUrl(value: unknown) {
@@ -14,6 +16,12 @@ function parseFacebookGroupUrl(value: unknown) {
   } catch {
     return null
   }
+}
+
+function getFacebookGroupIdentifier(url: string) {
+  const pathSegments = new URL(url).pathname.split("/").filter(Boolean)
+  const groupsIndex = pathSegments.findIndex((segment) => segment === "groups")
+  return groupsIndex >= 0 ? pathSegments[groupsIndex + 1] ?? null : null
 }
 
 export async function GET(request: NextRequest) {
@@ -68,6 +76,25 @@ export async function POST(request: NextRequest) {
     }
     if (!profiles.length) return badRequestResponse("At least one business profile is required.")
 
+    const groupIdentifier = getFacebookGroupIdentifier(url)
+    if (!groupIdentifier) return badRequestResponse("Use a Facebook group URL in the form https://www.facebook.com/groups/<group-id>.")
+
+    const facebookToken = await getFacebookAccessTokenForUser(ownerId)
+    if (!facebookToken) {
+      return NextResponse.json({ error: "facebook_connection_required", message: "Connect a Facebook token with group access before adding a group." }, { status: 403 })
+    }
+
+    const groupAccess = await resolveFacebookGroup(facebookToken.accessToken, groupIdentifier)
+    if (groupAccess.status === "inaccessible") {
+      return NextResponse.json(
+        { error: "facebook_group_access_denied", message: "Facebook did not grant this token access to that group. Ensure the app is installed in the group and your account has the required group role." },
+        { status: 403 },
+      )
+    }
+    if (groupAccess.status === "unavailable") {
+      return NextResponse.json({ error: "facebook_group_lookup_failed", message: "Facebook could not verify this group. Try again shortly." }, { status: 502 })
+    }
+
     const admin = getSupabaseAdmin()
     const { data: ownedProfiles, error: ownedProfilesError } = await admin
       .from("business_profiles")
@@ -81,6 +108,7 @@ export async function POST(request: NextRequest) {
       .from("monitored_groups")
       .insert({
         owner_id: ownerId,
+        facebook_group_id: groupAccess.groupId,
         name,
         url,
         interval_minutes: intervalMinutes,
