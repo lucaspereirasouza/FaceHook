@@ -44,7 +44,7 @@ export function Sidebar({
           <Radar className="size-5" />
         </div>
         <div className="hidden leading-tight sm:block">
-          <p className="text-sm font-semibold text-sidebar-accent-foreground">Signalscope</p>
+          <p className="text-sm font-semibold text-sidebar-accent-foreground">Facehook</p>
           <p className="text-xs text-sidebar-foreground/70">Lead Intelligence</p>
         </div>
       </div>

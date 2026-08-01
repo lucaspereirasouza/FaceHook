@@ -7,7 +7,7 @@ const geistSans = Geist({ subsets: ['latin'], variable: '--font-sans' })
 const geistMono = Geist_Mono({ subsets: ['latin'], variable: '--font-mono' })
 
 export const metadata: Metadata = {
-  title: 'Signalscope — Lead Intelligence Platform',
+  title: 'Facehook — Lead Intelligence Platform',
   description:
     'Monitor Facebook groups, classify posts with AI, and route qualified leads to Discord — all from one operational dashboard.',
   generator: 'v0.app',

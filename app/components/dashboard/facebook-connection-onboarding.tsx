@@ -16,7 +16,7 @@ export function FacebookConnectionOnboarding({ reason }: FacebookConnectionOnboa
     ? "Your Facebook authorization has expired. Reconnect to resume monitoring; your profiles and configuration remain unchanged."
     : reason === "invalid"
       ? "Facebook could no longer validate this connection. Reconnect to resume monitoring; your profiles and configuration remain unchanged."
-    : "A connected Facebook account is required before Signalscope can collect posts or run monitoring jobs."
+    : "A connected Facebook account is required before Facehook can collect posts or run monitoring jobs."
 
   return (
     <div className="mx-auto flex min-h-full w-full max-w-2xl items-center py-8">

@@ -253,7 +253,11 @@ export async function getFacebookSessionToken(sessionToken?: string): Promise<Fa
   const session = await getActiveSession(sessionToken)
   if (!session) return null
 
-  const connection = await getConnectionForUser(session.userId)
+  return getFacebookAccessTokenForUser(session.userId)
+}
+
+export async function getFacebookAccessTokenForUser(userId: string): Promise<FacebookSessionToken | null> {
+  const connection = await getConnectionForUser(userId)
   if (
     !connection ||
     connection.status !== "connected" ||
@@ -263,7 +267,7 @@ export async function getFacebookSessionToken(sessionToken?: string): Promise<Fa
     return null
   }
 
-  return { userId: session.userId, accessToken: decryptSecret(connection.access_token_encrypted) }
+  return { userId, accessToken: decryptSecret(connection.access_token_encrypted) }
 }
 
 export async function invalidateFacebookConnection(userId: string) {

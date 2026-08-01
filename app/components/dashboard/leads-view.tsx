@@ -10,7 +10,7 @@ import {
   urgencyColor,
   scoreColor,
 } from "@/lib/mock-data"
-import { getLead, getLeadFilters, listLeads, type Lead, type LeadStatus } from "@/lib/api"
+import { collectLeadsNow, getCollectionSettings, getLead, getLeadFilters, listLeads, updateCollectionSettings, type Lead, type LeadStatus } from "@/lib/api"
 import { cn } from "@/lib/utils"
 import {
   Search,
@@ -27,13 +27,31 @@ export function LeadsView() {
   const [filter, setFilter] = useState<LeadStatus | "All">("All")
   const [query, setQuery] = useState("")
   const [selectedId, setSelectedId] = useState<string | null>(null)
+  const [customInterval, setCustomInterval] = useState("")
+  const [isCollecting, setIsCollecting] = useState(false)
   const { data: leadFilters } = useSWR("lead-filters", getLeadFilters)
+  const { data: collectionSettings, mutate: mutateCollectionSettings } = useSWR("collection-settings", getCollectionSettings)
   const { data: leadPage } = useSWR(["leads", filter, query], () =>
     listLeads({ status: filter === "All" ? undefined : filter, search: query || undefined }),
   )
   const { data: selectedLead } = useSWR(selectedId ? ["lead", selectedId] : null, () => getLead(selectedId!))
   const filters: (LeadStatus | "All")[] = ["All", ...(leadFilters?.statuses ?? [])]
   const visible = leadPage?.items ?? []
+
+  async function setPollingInterval(value: number) {
+    if (!Number.isInteger(value) || value < 1) return
+    await mutateCollectionSettings(updateCollectionSettings(value), { rollbackOnError: true })
+  }
+
+  async function collectNow() {
+    setIsCollecting(true)
+    try {
+      await collectLeadsNow()
+      void mutateCollectionSettings()
+    } finally {
+      setIsCollecting(false)
+    }
+  }
 
   return (
     <div className="flex gap-6">
@@ -49,6 +67,16 @@ export function LeadsView() {
               className="h-9 w-full rounded-lg border border-border bg-card pl-9 pr-3 text-sm outline-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/30"
             />
           </div>
+        </div>
+
+        <div className="flex flex-wrap items-end gap-3 border-y border-border py-3">
+          <div><p className="text-sm font-medium">Collection delay</p><p className="text-xs text-muted-foreground">Graph batches are rate-limited to one run or more per account.</p></div>
+          <select aria-label="Collection delay" value={collectionSettings?.pollIntervalMinutes ?? 5} onChange={(event) => void setPollingInterval(Number(event.target.value))} className="h-9 rounded-md border border-input bg-background px-2 text-sm">
+            <option value={1}>1 minute</option><option value={2}>2 minutes</option><option value={5}>5 minutes</option><option value="custom">Custom</option>
+          </select>
+          <input aria-label="Custom collection delay in minutes" type="number" min="1" value={customInterval} onChange={(event) => setCustomInterval(event.target.value)} placeholder="Minutes" className="h-9 w-24 rounded-md border border-input bg-background px-2 text-sm" />
+          <Button size="sm" variant="outline" onClick={() => void setPollingInterval(Number(customInterval))} disabled={!customInterval}>Apply</Button>
+          <Button size="sm" onClick={() => void collectNow()} disabled={isCollecting}>{isCollecting ? "Collecting..." : "Collect now"}</Button>
         </div>
 
         <div className="flex flex-wrap gap-1.5">

@@ -3,6 +3,7 @@ import { NextRequest, NextResponse } from "next/server"
 import { badRequestResponse, getDashboardUserId, internalServerErrorResponse, unauthorizedResponse } from "@/lib/dashboard-api"
 import { asStringList, toBusinessProfile } from "@/lib/dashboard-models"
 import { encryptServerSecret } from "@/lib/facebookStore"
+import { parseClassifierModel } from "@/lib/classifier"
 import { getSupabaseAdmin } from "@/lib/supabase"
 
 function optionalString(value: unknown, maximumLength: number) {
@@ -38,7 +39,8 @@ export async function PATCH(request: NextRequest, context: { params: Promise<{ i
     const prompt = optionalString(body.prompt, 10_000)
     const responseStyle = optionalString(body.responseStyle, 2_000)
     const webhook = encryptedWebhook(body.discordWebhook)
-    if (name === null || !name || description === null || prompt === null || !prompt || responseStyle === null || webhook === false) {
+    const classifierModel = body.classifierModel === undefined ? undefined : parseClassifierModel(body.classifierModel)
+    if (name === null || !name || description === null || prompt === null || !prompt || responseStyle === null || webhook === false || (body.classifierModel !== undefined && !classifierModel)) {
       return badRequestResponse("A profile name, AI prompt, and valid field values are required.")
     }
 
@@ -52,6 +54,7 @@ export async function PATCH(request: NextRequest, context: { params: Promise<{ i
       locations: body.locations === undefined ? undefined : asStringList(body.locations),
       response_style: responseStyle ?? "",
       enabled: body.enabled === undefined ? undefined : body.enabled === true,
+      classifier_model: classifierModel,
       discord_webhook_encrypted: webhook,
       discord_webhook_key_version: webhook === undefined ? undefined : webhook ? "v1" : null,
     }

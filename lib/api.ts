@@ -62,6 +62,11 @@ export interface FacebookConnection {
   }
 }
 
+export interface CollectionSettings {
+  pollIntervalMinutes: number
+  lastBatchAt: string | null
+}
+
 export interface LeadListParams {
   status?: LeadStatus
   profile?: string
@@ -135,6 +140,18 @@ export function getTrend(days = 14) {
 
 export function getPipelineHealth() {
   return request<PipelineHealth>("/api/stats/pipeline")
+}
+
+export function getCollectionSettings() {
+  return request<CollectionSettings>("/api/collection/settings")
+}
+
+export function updateCollectionSettings(pollIntervalMinutes: number) {
+  return request<CollectionSettings>("/api/collection/settings", { method: "PATCH", body: { pollIntervalMinutes } })
+}
+
+export function collectLeadsNow() {
+  return request<{ collected: number; leads: number }>("/api/collection/run", { method: "POST" })
 }
 
 export function listProfiles() {

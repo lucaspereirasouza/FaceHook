@@ -32,6 +32,7 @@ export function ConfigureProfileDialog({ profile, onClose, onSave }: ConfigurePr
   const [responseStyle, setResponseStyle] = useState(profile.responseStyle)
   const [discordWebhook, setDiscordWebhook] = useState("")
   const [enabled, setEnabled] = useState(profile.enabled)
+  const [classifierModel, setClassifierModel] = useState<unknown | undefined>()
   const [error, setError] = useState<string | null>(null)
   const [isSaving, setIsSaving] = useState(false)
   const profileId = profile.id
@@ -57,6 +58,7 @@ export function ConfigureProfileDialog({ profile, onClose, onSave }: ConfigurePr
         responseStyle: responseStyle.trim(),
         enabled,
         ...(discordWebhook.trim() ? { discordWebhook: discordWebhook.trim() } : {}),
+        ...(classifierModel ? { classifierModel } : {}),
       })
       onSave(updatedProfile)
       onClose()
@@ -92,6 +94,7 @@ export function ConfigureProfileDialog({ profile, onClose, onSave }: ConfigurePr
             <Field label="Exclude keywords" htmlFor="configure-profile-negative"><input id="configure-profile-negative" value={negativeKeywords} onChange={(event) => setNegativeKeywords(event.target.value)} className={inputClassName} /></Field>
           </div>
           <div className="mt-4"><Field label="Replace Discord webhook" htmlFor="configure-profile-webhook" hint={profile.discordWebhook === "Configured" ? "A webhook is configured" : "Optional"}><input id="configure-profile-webhook" type="url" value={discordWebhook} onChange={(event) => setDiscordWebhook(event.target.value)} placeholder="https://discord.com/api/webhooks/..." className={inputClassName} /></Field></div>
+          <div className="mt-4"><Field label="Classifier model" htmlFor="configure-profile-classifier" hint="Offline-trained classifier.json"><input id="configure-profile-classifier" type="file" accept="application/json,.json" onChange={(event) => { const file = event.target.files?.[0]; if (!file) return; void file.text().then((text) => setClassifierModel(JSON.parse(text))).catch(() => setError("Classifier file must contain valid JSON.")) }} className={inputClassName} /></Field></div>
           <label className="mt-4 flex cursor-pointer items-center justify-between rounded-md border border-border bg-background px-3 py-2.5"><span><span className="block text-sm font-medium">Profile enabled</span><span className="block text-xs text-muted-foreground">Disabled profiles are excluded from lead classification.</span></span><input type="checkbox" checked={enabled} onChange={(event) => setEnabled(event.target.checked)} className="size-4 accent-primary" /></label>
           {error && <p role="alert" className="mt-4 rounded-md border border-destructive/25 bg-destructive/10 px-3 py-2 text-sm text-destructive">{error}</p>}
           <div className="mt-5 flex justify-end gap-2 border-t border-border pt-4"><Button type="button" variant="ghost" onClick={() => !isSaving && onClose()} disabled={isSaving}>Cancel</Button><Button type="submit" disabled={isSaving}>{isSaving ? "Saving..." : "Save Changes"}</Button></div>
