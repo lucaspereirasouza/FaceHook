@@ -79,7 +79,7 @@ export function GroupsView() {
       <div className="grid gap-4 md:grid-cols-2">
         {groups.map((group) => {
           const meta = statusMeta(group.status)
-          const StatusIcon = meta.icon
+          
           return (
             <Card key={group.id} className="overflow-hidden">
               <CardContent className="p-5">
@@ -95,7 +95,7 @@ export function GroupsView() {
                     </a>
                   </div>
                   <Badge className={meta.cls}>
-                    <StatusIcon className="size-3" />
+                    
                     {meta.label}
                   </Badge>
                 </div>
